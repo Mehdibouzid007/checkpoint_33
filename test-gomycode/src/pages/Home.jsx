@@ -1,15 +1,41 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import RecipeCard from "../Receipe/RecipeCard";
-import recipeData from "../Receipe/recipesData";
 import Hero from "../components/Hero";
 
 const Home = () => {
   const navigate = useNavigate();
   const [sortType, setSortType] = useState(null); // null, 'difficulty', or 'taste'
+  const [recipeData, setRecipeData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchRecipes = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/recipes');
+        if (!response.ok) {
+          throw new Error('Failed to fetch recipes');
+        }
+        const data = await response.json();
+        console.log('Fetched recipes:', data);
+        console.log('First recipe image:', data[0]?.image);
+        setRecipeData(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching recipes:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecipes();
+  }, []);
 
   const handleCardClick = (recipe) => {
-    navigate(`/recipe/${recipe.id}`);
+    navigate(`/recipe/${recipe._id || recipe.id}`);
   };
 
   const sortedRecipes = useMemo(() => {
@@ -20,7 +46,7 @@ const Home = () => {
       sorted.sort((a, b) => b.taste - a.taste);
     }
     return sorted;
-  }, [sortType]);
+  }, [sortType, recipeData]);
 
   return (
     <div style={styles.pageContainer}>
@@ -36,17 +62,24 @@ const Home = () => {
       <div style={styles.recipesSection}>
         <h2 style={styles.sectionTitle}>Nos recettes vedettes</h2>
         
-        <div style={styles.sortContainer}>
-          <button style={styles.sortButton} onClick={() => setSortType('difficulty')}>Trier par difficulté</button>
-          <button style={styles.sortButton} onClick={() => setSortType('taste')}>Trier par goût</button>
-          <button style={styles.sortButton} onClick={() => setSortType(null)}>Réinitialiser</button>
-        </div>
+        {loading && <p style={{ textAlign: 'center', fontSize: '1.2rem', color: '#a0410f' }}>Chargement des recettes...</p>}
+        {error && <p style={{ textAlign: 'center', fontSize: '1.2rem', color: '#f44336' }}>Erreur: {error}</p>}
+        
+        {!loading && !error && (
+          <>
+            <div style={styles.sortContainer}>
+              <button style={styles.sortButton} onClick={() => setSortType('difficulty')}>Trier par difficulté</button>
+              <button style={styles.sortButton} onClick={() => setSortType('taste')}>Trier par goût</button>
+              <button style={styles.sortButton} onClick={() => setSortType(null)}>Réinitialiser</button>
+            </div>
 
-        <div style={styles.cardGrid}>
-          {sortedRecipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} onClick={handleCardClick} />
-          ))}
-        </div>
+            <div style={styles.cardGrid}>
+              {sortedRecipes.map((recipe) => (
+                <RecipeCard key={recipe._id || recipe.id} recipe={recipe} onClick={handleCardClick} />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

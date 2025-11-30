@@ -2,13 +2,16 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import recipes from "./recipesData";
 
 function RecipeDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const recipe = recipes.find(r => r.id === parseInt(id));
+  const [recipe, setRecipe] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [imgError, setImgError] = useState(false);
   const { isAuth, user } = useSelector((state) => state.authReducer);
+  const defaultImage = "https://via.placeholder.com/800x400?text=Recipe+Image";
   
   // États pour les commentaires et votes
   const [commentText, setCommentText] = useState("");
@@ -16,9 +19,33 @@ function RecipeDetails() {
   const [userVote, setUserVote] = useState(null); // null, 'like', ou 'dislike'
   const [voteCounts, setVoteCounts] = useState({ likes: 0, dislikes: 0 });
 
+  // Fetch recipe from API
+  useEffect(() => {
+    const fetchRecipe = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/recipes/${id}`);
+        if (!response.ok) {
+          throw new Error('Recipe not found');
+        }
+        const data = await response.json();
+        setRecipe(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching recipe:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecipe();
+  }, [id]);
+
   // Charger les commentaires et votes depuis localStorage au montage
   useEffect(() => {
-    const recipeId = id;
+    if (!recipe) return;
+    const recipeId = recipe._id || recipe.id || id;
     const savedComments = localStorage.getItem(`recipe_${recipeId}_comments`);
     const savedVotes = localStorage.getItem(`recipe_${recipeId}_votes`);
     const userVoteKey = `recipe_${recipeId}_user_${user?.id || user?._id || user?.name || 'anonymous'}_vote`;
@@ -33,13 +60,14 @@ function RecipeDetails() {
     if (savedUserVote && isAuth) {
       setUserVote(savedUserVote);
     }
-  }, [id, isAuth, user]);
+  }, [recipe, id, isAuth, user]);
 
   // Gérer l'ajout de commentaire
   const handleAddComment = (e) => {
     e.preventDefault();
-    if (!commentText.trim() || !isAuth) return;
+    if (!commentText.trim() || !isAuth || !recipe) return;
 
+    const recipeId = recipe._id || recipe.id || id;
     const newComment = {
       id: Date.now(),
       text: commentText,
@@ -55,18 +83,18 @@ function RecipeDetails() {
 
     const updatedComments = [newComment, ...comments];
     setComments(updatedComments);
-    localStorage.setItem(`recipe_${id}_comments`, JSON.stringify(updatedComments));
+    localStorage.setItem(`recipe_${recipeId}_comments`, JSON.stringify(updatedComments));
     setCommentText("");
   };
 
   // Gérer le vote (pouce vert ou rouge)
   const handleVote = (voteType) => {
-    if (!isAuth) {
-      navigate("/login");
+    if (!isAuth || !recipe) {
+      if (!isAuth) navigate("/login");
       return;
     }
 
-    const recipeId = id;
+    const recipeId = recipe._id || recipe.id || id;
     const userVoteKey = `recipe_${recipeId}_user_${user?.id || user?._id || user?.name || 'anonymous'}_vote`;
     const currentVote = localStorage.getItem(userVoteKey);
 
@@ -110,10 +138,18 @@ function RecipeDetails() {
     localStorage.setItem(`recipe_${recipeId}_votes`, JSON.stringify(newVoteCounts));
   };
 
-  if (!recipe) {
+  if (loading) {
     return (
       <div style={{ padding: "30px 20px", fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", backgroundColor: "#f7f1e1", minHeight: "100vh", textAlign: "center" }}>
-        <p style={{ fontSize: "1.5rem", color: "#a0410f" }}>Recette introuvable</p>
+        <p style={{ fontSize: "1.5rem", color: "#a0410f" }}>Chargement de la recette...</p>
+      </div>
+    );
+  }
+
+  if (error || !recipe) {
+    return (
+      <div style={{ padding: "30px 20px", fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", backgroundColor: "#f7f1e1", minHeight: "100vh", textAlign: "center" }}>
+        <p style={{ fontSize: "1.5rem", color: "#a0410f" }}>{error || "Recette introuvable"}</p>
         <button
           onClick={() => navigate("/")}
           style={{
@@ -181,18 +217,36 @@ function RecipeDetails() {
         >
           {recipe.title}
         </h2>
-        <img
-          src={recipe.image}
-          alt={recipe.title}
-          style={{
+        {recipe.image && !imgError ? (
+          <img
+            src={recipe.image}
+            alt={recipe.title}
+            onError={() => setImgError(true)}
+            style={{
+              width: "100%",
+              maxHeight: "320px",
+              objectFit: "cover",
+              borderRadius: "15px",
+              marginBottom: "20px",
+              boxShadow: "0 6px 15px rgba(160, 65, 15, 0.4)"
+            }}
+          />
+        ) : (
+          <div style={{
             width: "100%",
-            maxHeight: "320px",
-            objectFit: "cover",
+            height: "320px",
+            backgroundColor: "#f0f0f0",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             borderRadius: "15px",
             marginBottom: "20px",
-            boxShadow: "0 6px 15px rgba(160, 65, 15, 0.4)"
-          }}
-        />
+            color: "#999",
+            fontSize: "1.2rem"
+          }}>
+            {imgError ? "Image failed to load" : "No image available"}
+          </div>
+        )}
         <p style={{ fontSize: "1.15rem", lineHeight: "1.6", color: "#5c482b", marginBottom: "25px" }}>
           {recipe.description}
         </p>

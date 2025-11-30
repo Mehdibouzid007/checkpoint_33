@@ -1,16 +1,19 @@
+require('dotenv').config();
+const mongoose = require('mongoose');
+const Recipe = require('../models/Recipe');
+const connectDB = require('../config/connectDB');
+
 const recipes = [
   {
-    id: 1,
     title: "Couscous",
     difficulty: 3,
     taste: 4.8,
     ingredients: ["semolina", "vegetables", "meat (lamb or chicken)", "spices"],
     image: "https://www.la-cuisine-marocaine.com/photos-recettes/01-couscous-au-khlii-aux-sept-aux-l.jpg",
-    description: "A traditional North African dish with steamed semolina servedi ,e with vegetables and meat.",
+    description: "A traditional North African dish with steamed semolina served with vegetables and meat.",
     video: "https://assets.mixkit.co/videos/preview/mixkit-cooking-preparation-33103-large.mp4"
   },
   {
-    id: 2,
     title: "Tajine (Moroccan Stew)",
     difficulty: 4,
     taste: 4.9,
@@ -20,7 +23,6 @@ const recipes = [
     video: "https://www.youtube.com/watch?v=1o6rRz8K3wU"
   },
   {
-    id: 3,
     title: "Mloukhiya",
     difficulty: 3,
     taste: 4.7,
@@ -30,7 +32,6 @@ const recipes = [
     video: "https://www.youtube.com/watch?v=qkoBCDPnJHU"
   },
   {
-    id: 4,
     title: "Brik (Tunisian Pastry)",
     difficulty: 2,
     taste: 4.5,
@@ -40,7 +41,6 @@ const recipes = [
     video: "https://www.youtube.com/watch?v=CyDu9HvQtWA"
   },
   {
-    id: 5,
     title: "Harira",
     difficulty: 3,
     taste: 4.6,
@@ -50,7 +50,6 @@ const recipes = [
     video: "https://assets.mixkit.co/videos/preview/mixkit-making-a-traditional-moroccan-harira-soup-42215-large.mp4"
   },
   {
-    id: 6,
     title: "Baghrir (Moroccan Pancake)",
     difficulty: 2,
     taste: 4.4,
@@ -60,15 +59,14 @@ const recipes = [
     video: "https://assets.mixkit.co/videos/preview/mixkit-making-crepes-in-a-pan-42213-large.mp4"
   },
   {
-    id: 7,
     title: "Moroccan Mint Tea",
     difficulty: 1,
     taste: 4.9,
     ingredients: ["green tea", "fresh mint", "sugar"],
-    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Moroccan_mint_tea.jpg/1200px-Moroccan_mint_tea.jpg",  
+    image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Moroccan_mint_tea.jpg/1200px-Moroccan_mint_tea.jpg",
+    description: "A traditional Moroccan tea made with green tea, fresh mint, and sugar."
   },
   {
-    id: 8,
     title: "Kalaa (Algerian Chicken Stew)",
     difficulty: 4,
     taste: 4.7,
@@ -78,7 +76,6 @@ const recipes = [
     video: "https://www.youtube.com/watch?v=FvVq4X-qCpo"
   },
   {
-    id: 9,
     title: "Shakshuka (North African style)",
     difficulty: 2,
     taste: 4.8,
@@ -88,7 +85,6 @@ const recipes = [
     video: "https://www.youtube.com/watch?v=PL1jKAl2Mtk"
   },
   {
-    id: 10,
     title: "Chorba (North African Soup)",
     difficulty: 2,
     taste: 4.6,
@@ -98,7 +94,6 @@ const recipes = [
     video: "https://www.youtube.com/watch?v=0hsgz_g2fw8"
   },
   {
-    id: 11,
     title: "Fricassé (Moroccan Dumplings)",
     difficulty: 3,
     taste: 4.5,
@@ -108,7 +103,6 @@ const recipes = [
     video: "https://www.youtube.com/watch?v=suX9j4x8n_M"
   },
   {
-    id: 12,
     title: "Makroudh (Sweet Pastry)",
     difficulty: 4,
     taste: 4.9,
@@ -118,7 +112,6 @@ const recipes = [
     video: "https://www.youtube.com/watch?v=wEy6vsV7twY"
   },
   {
-    id: 13,
     title: "Moroccan Couscous with Lamb",
     difficulty: 4,
     taste: 4.8,
@@ -128,7 +121,6 @@ const recipes = [
     video: "https://www.youtube.com/watch?v=4kmXu7Eak9o"
   },
   {
-    id: 14,
     title: "Tlitli (Libyan Pasta and Chickpeas)",
     difficulty: 3,
     taste: 4.4,
@@ -138,7 +130,6 @@ const recipes = [
     video: "https://www.youtube.com/watch?v=Ka1v8LmNQ7s"
   },
   {
-    id: 15,
     title: "Briouats (North African Savory Pastries)",
     difficulty: 3,
     taste: 4.7,
@@ -149,4 +140,24 @@ const recipes = [
   }
 ];
 
-export default recipes;
+const seedRecipes = async () => {
+    try {
+        await connectDB();
+        
+        // Clear existing recipes (optional - remove if you want to keep existing data)
+        await Recipe.deleteMany({});
+        console.log('Cleared existing recipes');
+        
+        // Insert recipes
+        await Recipe.insertMany(recipes);
+        console.log(`Successfully seeded ${recipes.length} recipes`);
+        
+        process.exit(0);
+    } catch (error) {
+        console.error('Error seeding recipes:', error);
+        process.exit(1);
+    }
+};
+
+seedRecipes();
+

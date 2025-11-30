@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import recipes from "../Receipe/recipesData";
 
 const Profile = () => {
   const user = useSelector((state) => state.authReducer.user);
@@ -10,6 +9,24 @@ const Profile = () => {
   const [userComments, setUserComments] = useState([]);
   const [showImageInput, setShowImageInput] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
+  const [recipes, setRecipes] = useState([]);
+
+  // Fetch recipes from API
+  useEffect(() => {
+    const fetchRecipes = async () => {
+      try {
+        const response = await fetch('/api/recipes');
+        if (response.ok) {
+          const data = await response.json();
+          setRecipes(data);
+        }
+      } catch (error) {
+        console.error('Error fetching recipes:', error);
+      }
+    };
+
+    fetchRecipes();
+  }, []);
 
   // Charger la photo de profil depuis localStorage
   useEffect(() => {
@@ -21,12 +38,15 @@ const Profile = () => {
 
   // Charger tous les commentaires de l'utilisateur
   useEffect(() => {
+    if (recipes.length === 0) return;
+
     const userName = user?.name || user?.username || "Utilisateur";
     const allComments = [];
 
     // Parcourir toutes les recettes pour trouver les commentaires
     recipes.forEach((recipe) => {
-      const savedComments = localStorage.getItem(`recipe_${recipe.id}_comments`);
+      const recipeId = recipe._id || recipe.id;
+      const savedComments = localStorage.getItem(`recipe_${recipeId}_comments`);
       if (savedComments) {
         try {
           const comments = JSON.parse(savedComments);
@@ -34,7 +54,7 @@ const Profile = () => {
             if (comment.author === userName) {
               allComments.push({
                 ...comment,
-                recipeId: recipe.id,
+                recipeId: recipeId,
                 recipeTitle: recipe.title
               });
             }
@@ -48,7 +68,7 @@ const Profile = () => {
     // Trier par date (plus récent en premier)
     allComments.sort((a, b) => b.id - a.id);
     setUserComments(allComments);
-  }, [user]);
+  }, [user, recipes]);
 
   // Gérer le changement de photo de profil
   const handleProfilePictureChange = () => {
